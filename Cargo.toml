@@ -1,0 +1,19 @@
+[package]
+name = "crydec"
+version = "0.1.0"
+description = "Encrypts and decrypts stream of bytes: stdin or file to stdout or file"
+edition = "2021"
+license = "Apache-2.0"
+authors = ["Lex <appstronomer@gmail.com>"]
+readme = "README.md"
+rust-version = "1.65.0"
+
+[dependencies]
+zeroize = "1.5.7"
+rust-argon2 = "1.0"
+aead = { version = "0.5.1", features = ["getrandom"] }
+chacha20poly1305 = { version = "0.10.1", features = ["stream"] }
+aes-gcm = "0.10.1"
+clap = { version = "4.0.26", features = ["derive"] }
+rpassword = "7.1.0"
+rand = "0.8.5"
