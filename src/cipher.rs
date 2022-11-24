@@ -19,17 +19,6 @@ const BUFFER_LEN_ENC: usize = 500;
 const BUFFER_LEN_DEC: usize =  BUFFER_LEN_ENC + 16;
 
 
-/// Returns key size and nonce cize for any supported cipher type
-pub fn get_spec(cipher: &CipherType) -> (u32, usize) {
-    match cipher {
-        CipherType::XChacha20Poly1305 => (32, 24),
-        CipherType::Chacha20Poly1305 => (32, 12),
-        CipherType::Aes256Gcm => (32, 12),
-        CipherType::Aes128Gcm => (16, 12),
-    }
-}
-
-
 pub fn encrypt(cipher_type: CipherType, key: &[u8], nonce: &[u8], src: &mut Input, dst: &mut Output) -> Result<(), Error> {
     // TODO: catch panic!
     match cipher_type {

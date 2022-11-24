@@ -14,14 +14,7 @@ use cli::{Cli, Commands};
 fn main() -> Result<(), Error> {
     let cli = Cli::parse();
     match cli.command {
-        Commands::Encrypt(params) => {
-            let (input, output) = io::make_inout(params.io.fin, params.io.fout)?;
-            command::encrypt(params.common, input, output)?;
-        },
-        Commands::Decrypt(params) => {
-            let (input, output) = io::make_inout(params.io.fin, params.io.fout)?;
-            command::decrypt(params.common, input, output)?;
-        }
+        Commands::Encrypt(params) => command::encrypt(params.io, params.pwd, params.spec),
+        Commands::Decrypt(params) => command::decrypt(params.io, params.pwd),
     }
-    Ok(())
 }
