@@ -91,10 +91,15 @@ impl Input {
     }
 
     pub fn read(&mut self, buf: &mut [u8]) -> Result<usize, Error> {
-        match self.reader.read(buf) {
-            Ok(n) => Ok(n),
-            Err(err) => Err(Error::Io(err))
+        let mut nread = 0usize;
+        while nread < buf.len() {
+            match self.reader.read(&mut buf[nread..]) {
+                Ok(0) => break,
+                Ok(n) => nread += n,
+                Err(e) => return Err(Error::Io(e)),
+            }
         }
+        Ok(nread)
     }
 }
 
@@ -114,10 +119,7 @@ impl Output {
         })
     }
 
-    pub fn write(&mut self, buf: &[u8]) -> Result<usize, Error> {
-        match self.writer.write(buf) {
-            Ok(n) => Ok(n),
-            Err(err) => Err(Error::Io(err)),
-        }
+    pub fn write(&mut self, buf: &[u8]) -> Result<(), Error> {
+        self.writer.write_all(buf).map_err(|err| Error::Io(err))
     }
 }
