@@ -5,16 +5,23 @@ mod cli;
 mod command;
 mod hash;
 
+use std::io::Write;
+
 use clap::Parser;
-use error::Error;
 
 use cli::{Cli, Commands};
 
 
-fn main() -> Result<(), Error> {
+fn main() {
     let cli = Cli::parse();
-    match cli.command {
-        Commands::Encrypt(params) => command::encrypt(params.io, params.pwd, params.spec),
-        Commands::Decrypt(params) => command::decrypt(params.io, params.pwd),
+    let res = match cli.command {
+        Commands::Encrypt(cfg) => command::encrypt(cfg.cipher, cfg.io, cfg.pwd_cli, cfg.hash, cfg.rand),
+        Commands::Decrypt(cfg) => command::decrypt(cfg.io, cfg.pwd_cli),
+    };
+    if let Err(err) = res {
+        let _ = writeln!(&mut std::io::stderr(), "ERROR: {}", err);
+        std::process::exit(1);
+    } else {
+        std::process::exit(0);
     }
 }

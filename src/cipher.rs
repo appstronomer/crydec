@@ -19,9 +19,9 @@ const BUFFER_LEN_ENC: usize = 500;
 const BUFFER_LEN_DEC: usize =  BUFFER_LEN_ENC + 16;
 
 
-pub fn encrypt(cipher_type: CipherType, key: &[u8], nonce: &[u8], src: &mut Input, dst: &mut Output) -> Result<(), Error> {
+pub fn encrypt(cipher: CipherType, key: &[u8], nonce: &[u8], src: &mut Input, dst: &mut Output) -> Result<(), Error> {
     // TODO: catch panic!
-    match cipher_type {
+    match cipher {
         CipherType::XChacha20Poly1305 => {
             let aead = XChaCha20Poly1305::new(key.into());
             let encryptor = EncryptorBE32::from_aead(aead, nonce.into());
@@ -46,9 +46,9 @@ pub fn encrypt(cipher_type: CipherType, key: &[u8], nonce: &[u8], src: &mut Inpu
     Ok(())
 }
 
-pub fn decrypt(cipher_type: CipherType, key: &[u8], nonce: &[u8], src: &mut Input, dst: &mut Output) -> Result<(), Error> {
+pub fn decrypt(cipher: CipherType, key: &[u8], nonce: &[u8], src: &mut Input, dst: &mut Output) -> Result<(), Error> {
     // TODO: catch panic!
-    match cipher_type {
+    match cipher {
         CipherType::XChacha20Poly1305 => {
             let aead = XChaCha20Poly1305::new(key.into());
             let encryptor = DecryptorBE32::from_aead(aead, nonce.into());

@@ -1,6 +1,6 @@
 use std::{
     fs::File,
-    io::{Read, Write, stdin, stdout},
+    io::{Read, Write, stdin, stdout, ErrorKind as IoErrorKind, Error as IoError},
     path::PathBuf,
 };
 
@@ -90,6 +90,10 @@ impl Input {
         })
     }
 
+    pub fn read_exact(&mut self, buf: &mut [u8]) -> Result<(), Error> {
+        self.reader.read_exact(buf).map_err(|err| Error::Io(err))
+    }
+
     pub fn read(&mut self, buf: &mut [u8]) -> Result<usize, Error> {
         let mut nread = 0usize;
         while nread < buf.len() {
@@ -100,6 +104,28 @@ impl Input {
             }
         }
         Ok(nread)
+    }
+
+    pub fn read_u8(&mut self) -> Result<u8, Error> {
+        let mut arr = [0u8; 1];
+        let num = self.read(&mut arr)?;
+        if num != 1 {
+            Err(Error::Io(IoError::new(IoErrorKind::UnexpectedEof, "unable to read u8")))
+        } else {
+            Ok(u8::from_be_bytes(arr))
+        }
+
+    }
+
+    pub fn read_u32(&mut self) -> Result<u32, Error> {
+        let mut arr = [0u8; 4];
+        let num = self.read(&mut arr)?;
+        if num != 4 {
+            Err(Error::Io(IoError::new(IoErrorKind::UnexpectedEof, "unable to read u32")))
+        } else {
+            Ok(u32::from_be_bytes(arr))
+        }
+
     }
 }
 
@@ -121,5 +147,13 @@ impl Output {
 
     pub fn write(&mut self, buf: &[u8]) -> Result<(), Error> {
         self.writer.write_all(buf).map_err(|err| Error::Io(err))
+    }
+
+    pub fn write_u8(&mut self, val: u8) -> Result<(), Error> {
+        self.write(&val.to_be_bytes())
+    }
+
+    pub fn write_u32(&mut self, val: u32) -> Result<(), Error> {
+        self.write(&val.to_be_bytes())
     }
 }

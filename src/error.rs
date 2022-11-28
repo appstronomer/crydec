@@ -10,11 +10,11 @@ pub enum Error {
 impl std::fmt::Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Error::Io(err) => write!(f, "io error: {}", err),
-            Error::Aead(err) => write!(f, "cipher algorithm error: {}", err),
-            Error::Arg(err) => write!(f, "argument error: {}", err),
-            Error::Hash(err) => write!(f, "hash argon2 error: {}", err),
-            Error::Spec(err) => write!(f, "spec error: {}", err),
+            Error::Io(err) => write!(f, "io: {}", err),
+            Error::Aead(err) => write!(f, "cipher algorithm: {}", err),
+            Error::Arg(err) => write!(f, "argument: {}", err),
+            Error::Hash(err) => write!(f, "hash argon2: {}", err),
+            Error::Spec(err) => write!(f, "spec: {}", err),
         }   
     }
 }

@@ -26,17 +26,17 @@ crydec decrypt --fin enc > dec.txt
 
 Encrypt and decrypt using salt `68a489eaf8fefdebf882188c502145ec` and nonce 
 `7364897364773283294` specified via cli args. You may set salt and nonce over tty
-by using `--salt-tty` and `--nonce-tty` flags. All encryption config will be saved 
+by using `--salt` and `--nonce` flags. All encryption config will be saved 
 to `enc.spec` file instead of ciphertext header due to `--fspec` argument. You 
 have to provide the same spec file during decryption.
 ```sh
-cat src.txt | cargo run -- encrypt --salt 68a489eaf8fefdebf882188c502145ec --nonce 7364897364773283294 --fspec enc.spec > enc \
+cat src.txt | cargo run -- encrypt --salt-cli 68a489eaf8fefdebf882188c502145ec --nonce-cli 7364897364773283294 --fspec enc.spec > enc \
 && cat enc | cargo run -- decrypt --fspec enc.spec > dec.txt
 ```
 
 ## Priorities
 - [x] Implement option to write random generated salt and nonce to a separate file.
-- [ ] Reveal main argon2 params as cli arguments.
+- [x] Reveal main argon2 params as cli arguments.
 - [ ] Add missing ChaCha ciphers.
 - [ ] Unit tests.
 

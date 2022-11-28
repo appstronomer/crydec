@@ -23,26 +23,31 @@ pub enum Commands {
 #[derive(Args, Debug)]
 pub struct Encrypt {
     #[clap(flatten)]
-    pub io: Io,
-    /// password as cli argument
-    #[arg(long)]
-    pub pwd: Option<String>,
+    pub io: CfgIo,
+    #[arg(long, value_enum, default_value_t=Cipher::XChacha20Poly1305)]
+    pub cipher: Cipher,
     #[clap(flatten)]
-    pub spec: Spec,
+    pub hash: CfgHash,
+    #[clap(flatten)]
+    pub rand: CfgRand,
+    /// (insecure) password as cli argument
+    #[arg(long)]
+    pub pwd_cli: Option<String>,
 }
 
 
 #[derive(Args, Debug)]
 pub struct Decrypt {
     #[clap(flatten)]
-    pub io: Io,
-    /// password as cli argument
+    pub io: CfgIo,
+    /// (insecure) password as cli argument
     #[arg(long)]
-    pub pwd: Option<String>,
+    pub pwd_cli: Option<String>,
 }
 
+
 #[derive(Args, Debug)]
-pub struct Io {
+pub struct CfgIo {
     /// use file as input instead of stdin
     #[arg(long)]
     pub fin: Option<PathBuf>,
@@ -54,23 +59,94 @@ pub struct Io {
     pub fspec: Option<PathBuf>,
 }
 
+
 #[derive(Args, Debug)]
-pub struct Spec {
-    /// salt as cli argument, used as utf-8 string bytes
+pub struct CfgHash {
+    #[arg(long, value_enum, default_value_t=ArgonVariant::Argon2id)]
+    pub hash_var: ArgonVariant,
+    #[arg(long, value_enum, default_value_t=ArgonVersion::Ver13)]
+    pub hash_ver: ArgonVersion,
+    /// argon2 degree of parallelism
+    #[arg(long, default_value_t=4)]
+    pub lanes: u32,
+    /// argon2 memory cost in kibibytes
+    #[arg(long, default_value_t=2 * 1024 * 1024)]
+    pub memory: u32,
+    /// argon2 number of rounds to use
+    #[arg(long, default_value_t=1)]
+    pub time: u32,
+}
+
+
+#[derive(Args, Debug)]
+pub struct CfgRand {
+    /// (insecure) salt as cli argument, used as utf-8 string bytes
     #[arg(long)]
-    pub salt: Option<String>,
+    pub salt_cli: Option<String>,
     /// salt as tty input, used as utf-8 string bytes
     #[arg(long)]
-    pub salt_tty: bool,
-    /// nonce as cli argument, used as utf-8 string bytes
+    pub salt: bool,
+    /// (insecure) nonce as cli argument, used as utf-8 string bytes
     #[arg(long)]
-    pub nonce: Option<String>,
+    pub nonce_cli: Option<String>,
     /// nonce as tty input, used as utf-8 string bytes
     #[arg(long)]
-    pub nonce_tty: bool, 
-    #[arg(long, value_enum, default_value_t=Cipher::XChacha20Poly1305)]
-    pub cipher: Cipher,
+    pub nonce: bool, 
 }
+
+
+#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, ValueEnum, Debug)]
+pub enum ArgonVariant {
+    Argon2i,
+    Argon2d,
+    Argon2id,
+}
+
+impl ArgonVariant {
+    pub fn from_type_id(type_id: u8) -> Result<Self, Error> {
+        let res = match type_id {
+            0 => Self::Argon2i,
+            1 => Self::Argon2d,
+            2 => Self::Argon2id,
+            _ => return Err(Error::Spec("unable to define hash variant".to_string())),
+        };
+        Ok(res)
+    }
+
+    pub fn get_type_id(&self) -> u8 {
+        match self {
+            Self::Argon2i => 0,
+            Self::Argon2d => 1,
+            Self::Argon2id => 2,
+        }
+    }
+}
+
+
+#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, ValueEnum, Debug)]
+pub enum ArgonVersion {
+    Ver10,
+    Ver13,
+}
+
+impl ArgonVersion {
+    pub fn from_type_id(type_id: u8) -> Result<Self, Error> {
+        let res = match type_id {
+            0 => Self::Ver10,
+            1 => Self::Ver13,
+            _ => return Err(Error::Spec("unable to define hash version".to_string())),
+        };
+        Ok(res)
+    }
+
+    pub fn get_type_id(&self) -> u8 {
+        match self {
+            Self::Ver10 => 0,
+            Self::Ver13 => 1,
+        }
+    }
+}
+
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, ValueEnum, Debug)]
 pub enum Cipher {
@@ -79,6 +155,7 @@ pub enum Cipher {
     Aes256Gcm,
     Aes128Gcm,
 }
+
 impl Cipher {
     /// Returns cipher type by type_id
     pub fn from_type_id(type_id: u8) -> Result<Self, Error> {
