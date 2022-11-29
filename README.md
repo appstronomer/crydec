@@ -37,7 +37,7 @@ cat enc | cargo run -- decrypt --fspec enc.spec > dec.txt
 Multiple encryption and decryption with different ciphers using linux piping.
 ```sh
 cat src.txt | crydec encrypt | crydec encrypt --cipher aes256-gcm | crydec encrypt --cipher aes128-gcm > enc
-cat enc | crydec decrypt | crydec decrypt --fspec spec | crydec decrypt > dec.txt
+cat enc | crydec decrypt | crydec decrypt | crydec decrypt > dec.txt
 ```
 
 ## Priorities
