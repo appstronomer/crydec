@@ -30,15 +30,22 @@ by using `--salt` and `--nonce` flags. All encryption config will be saved
 to `enc.spec` file instead of ciphertext header due to `--fspec` argument. You 
 have to provide the same spec file during decryption.
 ```sh
-cat src.txt | cargo run -- encrypt --salt-cli 68a489eaf8fefdebf882188c502145ec --nonce-cli 7364897364773283294 --fspec enc.spec > enc \
-&& cat enc | cargo run -- decrypt --fspec enc.spec > dec.txt
+cat src.txt | cargo run -- encrypt --salt-cli 68a489eaf8fefdebf882188c502145ec --nonce-cli 7364897364773283294 --fspec enc.spec > enc
+cat enc | cargo run -- decrypt --fspec enc.spec > dec.txt
+```
+
+Multiple encryption and decryption with different ciphers using linux piping.
+```sh
+cat src.txt | crydec encrypt | crydec encrypt --cipher aes256-gcm | crydec encrypt --cipher aes128-gcm > enc
+cat enc | crydec decrypt | crydec decrypt --fspec spec | crydec decrypt > dec.txt
 ```
 
 ## Priorities
 - [x] Implement option to write random generated salt and nonce to a separate file.
 - [x] Reveal main argon2 params as cli arguments.
-- [ ] Add missing ChaCha ciphers.
+- [x] Add missing ChaCha ciphers.
 - [ ] Unit tests.
+- [ ] Prevent rand::OsRng panic probability somehow.
 
 ## Inspiration
 - The will to learn memory management and encryption in Rust.
