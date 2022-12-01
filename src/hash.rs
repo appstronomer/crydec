@@ -27,6 +27,6 @@ pub fn make_key(cfg: &CfgHash, password: &str, salt: &[u8], key_size: u32) -> Re
         thread_mode: ThreadMode::Parallel,
         ..Default::default()
     };
-    let hash = argon2::hash_raw(password.as_bytes(), salt, &config).map_err(|err|Error::Hash(err))?;
+    let hash = argon2::hash_raw(password.as_bytes(), salt, &config).map_err(Error::make_hash)?;
     Ok(Zeroizing::new(hash))
 }

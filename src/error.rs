@@ -19,4 +19,12 @@ impl std::fmt::Display for Error {
     }
 }
 
+impl Error {
+    pub fn make_io(err: std::io::Error) -> Self { Self::Io(err) }
+    pub fn make_aead(err: aead::Error) -> Self { Self::Aead(err) }
+    pub fn make_arg(err: impl ToString) -> Self { Self::Arg(err.to_string()) }
+    pub fn make_hash(err: argon2::Error) -> Self { Self::Hash(err) }
+    pub fn make_spec(err: impl ToString) -> Self { Self::Spec(err.to_string()) }
+}
+
 impl std::error::Error for Error {}

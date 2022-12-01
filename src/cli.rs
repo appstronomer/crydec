@@ -108,7 +108,7 @@ impl ArgonVariant {
             0 => Self::Argon2i,
             1 => Self::Argon2d,
             2 => Self::Argon2id,
-            _ => return Err(Error::Spec("unable to define hash variant".to_string())),
+            _ => return Err(Error::make_spec("unable to define hash variant")),
         };
         Ok(res)
     }
@@ -134,7 +134,7 @@ impl ArgonVersion {
         let res = match type_id {
             0 => Self::Ver10,
             1 => Self::Ver13,
-            _ => return Err(Error::Spec("unable to define hash version".to_string())),
+            _ => return Err(Error::make_spec("unable to define hash version")),
         };
         Ok(res)
     }
@@ -172,7 +172,7 @@ impl Cipher {
             5 => Self::Chacha8Poly1305,
             6 => Self::Aes256Gcm,
             7 => Self::Aes128Gcm,
-            _ => return Err(Error::Spec("unable to define cipher type".to_string())),
+            _ => return Err(Error::make_spec("unable to define cipher type")),
         };
         Ok(res)
     }

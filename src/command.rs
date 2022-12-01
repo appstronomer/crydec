@@ -1,3 +1,5 @@
+use std::fs::File;
+
 use rand::{RngCore, rngs::OsRng};
 use zeroize::Zeroizing;
 
@@ -5,7 +7,7 @@ use crate::{
     hash::make_key,
     cipher,
     cli::{CfgRand, CfgIo, Cipher as CipherType, CfgHash, ArgonVariant, ArgonVersion, Cipher},
-    io::{Input, Output, extract_pwd, extract_salt, extract_nonce, make_inout},
+    io::{Input, Output, make_inout, make_control},
     error::Error,
 };
 
@@ -13,24 +15,27 @@ use crate::{
 pub fn encrypt(cipher: Cipher, cfg_io: CfgIo, cfg_pwd: Option<String>, cfg_hash: CfgHash, cfg_rand: CfgRand) -> Result<(), Error> {
     // IO preparing: input stream, output stream, spec stream
     let (mut input, mut output) = make_inout(cfg_io.fin, cfg_io.fout)?;
-    let mut spec_file: Output;
+    let mut spec_stream: Output;
     let spec = if let Some(path) = cfg_io.fspec {
-        spec_file = Output::from_fpath(path)?;
-        &mut spec_file
+        spec_stream = Output::new( Box::new( File::create(path).map_err(Error::make_io)? ) );
+        &mut spec_stream
     } else {
         &mut output
     };
+
+    // Control to extract some arguments
+    let ctrl = make_control();
 
     // Have to wait for first data before any TTY input to implement multiple encryption using unix pipes
     let mut buf = [0u8; cipher::BUFFER_LEN_ENC];
     let nread = input.read(&mut buf)?;
 
     // Password preparing
-    let password = extract_pwd(cfg_pwd)?;
+    let password = ctrl.prompt("password", cfg_pwd)?;
 
     // Salt preparing
     let mut salt = Zeroizing::new([0u8; 32]);
-    if let None = extract_salt(&mut salt, cfg_rand.salt_cli, cfg_rand.salt)? {
+    if let None = ctrl.extract("salt", &mut salt[..], cfg_rand.salt_cli, cfg_rand.salt)? {
         OsRng.fill_bytes( salt.as_mut());
     }
     
@@ -39,13 +44,10 @@ pub fn encrypt(cipher: Cipher, cfg_io: CfgIo, cfg_pwd: Option<String>, cfg_hash:
 
     // Nonce preparing
     let mut nonce_arr = Zeroizing::new([0u8; 19]);
-    let nonce = if let Some(nonce_slice) = extract_nonce(&mut nonce_arr, nonce_size, cfg_rand.nonce_cli, cfg_rand.nonce)? {
-        nonce_slice
-    } else {
-        let nonce_slice = &mut nonce_arr[..nonce_size];
-        OsRng.fill_bytes(nonce_slice);
-        nonce_slice
-    };
+    let nonce = &mut nonce_arr[..nonce_size];
+    if let None = ctrl.extract("nonce", nonce, cfg_rand.nonce_cli, cfg_rand.nonce)? {
+        OsRng.fill_bytes(nonce);
+    }
 
     // Key preparing
     let key = make_key(&cfg_hash, &password, salt.as_ref(), key_size)?;
@@ -70,10 +72,10 @@ pub fn encrypt(cipher: Cipher, cfg_io: CfgIo, cfg_pwd: Option<String>, cfg_hash:
 pub fn decrypt(cfg_io: CfgIo, cfg_pwd: Option<String>) -> Result<(), Error> {
     // IO preparing: input stream, output stream, spec stream
     let (mut input, mut output) = make_inout(cfg_io.fin, cfg_io.fout)?;
-    let mut spec_file: Input;
+    let mut spec_stream: Input;
     let spec = if let Some(path) = cfg_io.fspec {
-        spec_file = Input::from_fpath(path)?;
-        &mut spec_file
+        spec_stream = Input::new( Box::new( File::open(path).map_err(Error::make_io)? ) );
+        &mut spec_stream
     } else {
         &mut input
     };
@@ -112,8 +114,11 @@ pub fn decrypt(cfg_io: CfgIo, cfg_pwd: Option<String>) -> Result<(), Error> {
     let mut buf = [0u8; cipher::BUFFER_LEN_DEC];
     let nread = input.read(&mut buf)?;
 
+    // Control to extract password
+    let ctrl = make_control();
+
     // Password preparing
-    let password = extract_pwd(cfg_pwd)?;
+    let password = ctrl.prompt("password", cfg_pwd)?;
 
     // Key preparing
     let key = make_key(&cfg_hash, &password, salt.as_ref(), key_size)?;

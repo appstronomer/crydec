@@ -123,10 +123,10 @@ fn transfer_encryption<T>(mut encryptor: EncryptorBE32<T>, src: &mut Input, dst:
     let mut read_count = nread;
     loop {
         if read_count == BUFFER_LEN_ENC {
-            let ciphertext= encryptor.encrypt_next(buf.as_slice()).map_err(|e| Error::Aead(e))?;
+            let ciphertext= encryptor.encrypt_next(buf.as_slice()).map_err(Error::make_aead)?;
             dst.write(&ciphertext)?;
         } else {
-            let ciphertext = encryptor.encrypt_last(&buf[..read_count]).map_err(|e| Error::Aead(e))?;
+            let ciphertext = encryptor.encrypt_last(&buf[..read_count]).map_err(Error::make_aead)?;
             dst.write(&ciphertext)?;
             break;
         }
@@ -144,12 +144,12 @@ fn transfer_decryption<T>(mut decryptor: DecryptorBE32<T>, src: &mut Input, dst:
     let mut read_count = nread;
     loop {
         if read_count == BUFFER_LEN_DEC {
-            let plaintext = decryptor.decrypt_next(buf.as_slice()).map_err(|e| Error::Aead(e))?;
+            let plaintext = decryptor.decrypt_next(buf.as_slice()).map_err(Error::make_aead)?;
                 dst.write(&plaintext)?;
         } else if read_count == 0 {
             break;
         } else {
-            let plaintext = decryptor.decrypt_last(&buf[..read_count]).map_err(|e| Error::Aead(e))?;
+            let plaintext = decryptor.decrypt_last(&buf[..read_count]).map_err(Error::make_aead)?;
             dst.write(&plaintext)?;
             break;
         }
