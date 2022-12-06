@@ -149,33 +149,40 @@ impl Output {
 
 #[cfg(test)]
 mod tests {
-    use std::io::{Read, Result, Error, ErrorKind};
-    use super::Input;
+    use std::{
+        rc::Rc,
+        cell::RefCell,
+        borrow::Borrow,
+        io::{Read, Write, Result, Error, ErrorKind},
+    };
+    use zeroize::Zeroizing;
+    use crate::error::Error as CrateError;
+    use super::{Input, Output, Control};
 
 
     #[test]
     fn input_read_aliquant() {
-        const SIZE_DATA: usize = 41;
-        const SIZE_SAMPLE: usize = SIZE_DATA + 1;
-        const SIZE_BUFFER: usize = 15;
-        let (left, right) = input_read_base(5, SIZE_DATA, SIZE_SAMPLE, SIZE_BUFFER);
+        let size_data: usize = 41;
+        let size_sample: usize = size_data + 1;
+        let size_buffer: usize = 15;
+        let (left, right) = input_read_base(5, size_data, size_sample, size_buffer);
         assert_eq!(left, right);
     }
 
 
     #[test]
     fn input_read_aliquot() {
-        const SIZE_DATA: usize = 40;
-        const SIZE_SAMPLE: usize = SIZE_DATA;
-        const SIZE_BUFFER: usize = 10;
-        let (left, right) = input_read_base(5, SIZE_DATA, SIZE_SAMPLE, SIZE_BUFFER);
+        let size_data: usize = 40;
+        let size_sample: usize = size_data;
+        let size_buffer: usize = 10;
+        let (left, right) = input_read_base(5, size_data, size_sample, size_buffer);
         assert_eq!(left, right);
     }
 
     
     #[test]
     fn input_read_u32() {
-        const VALUE: u32 = 2177283148;
+        const VALUE: u32 = 2217864614;
         let bytes = VALUE.clone().to_be_bytes();
         let mock_read = MockRead::new(bytes, 5);
         let mut input = Input::new( Box::new(mock_read) );
@@ -185,7 +192,7 @@ mod tests {
     
     #[test]
     fn input_read_u8() {
-        const VALUE: u8 = 184;
+        const VALUE: u8 = 188;
         let bytes = VALUE.clone().to_be_bytes();
         let mock_read = MockRead::new(bytes, 5);
         let mut input = Input::new( Box::new(mock_read) );
@@ -203,6 +210,222 @@ mod tests {
         let mut input = Input::new( Box::new(mock_read) );
         input.read_exact(&mut fact).unwrap();
         assert_eq!(expect, fact);
+    }
+
+
+    #[test]
+    fn output_write_aliquant() {
+        let size_data: usize = 41;
+        let size_sample: usize = size_data + 1;
+        let (left, right_rc) = output_write_base(5, size_data, size_sample);
+        let right_refcell: &RefCell<Vec<u8>> = right_rc.borrow();
+        let rigth_borrow = right_refcell.borrow();
+        let right_ref: &Vec<u8> = rigth_borrow.as_ref();
+        assert_eq!(&left, right_ref);
+    }
+
+
+    #[test]
+    fn output_write_aliquot() {
+        let size_data: usize = 40;
+        let size_sample: usize = size_data;
+        let (left, right_rc) = output_write_base(5, size_data, size_sample);
+        let right_refcell: &RefCell<Vec<u8>> = right_rc.borrow();
+        let rigth_borrow = right_refcell.borrow();
+        let right_ref: &Vec<u8> = rigth_borrow.as_ref();
+        assert_eq!(&left, right_ref);
+    }
+
+    
+    #[test]
+    fn output_write_u32() {
+        const VALUE: u32 = 2217864614;
+        let right_rc = Rc::new(RefCell::new( [0u8; 4] ));
+        {
+            let mock_write = MockWrite::new(right_rc.clone(), 5);
+            let mut output = Output::new( Box::new(mock_write) );
+            output.write_u32(VALUE).unwrap();
+        }
+        let right_refcell: &RefCell<[u8; 4]> = right_rc.borrow();
+        let rigth_borrow = right_refcell.borrow();
+        let right_ref = rigth_borrow.as_ref();
+        assert_eq!(&VALUE.to_be_bytes(), right_ref);
+    }
+
+    
+    #[test]
+    fn output_write_u8() {
+        const VALUE: u8 = 188;
+        let right_rc = Rc::new(RefCell::new( [0u8; 1] ));
+        {
+            let mock_write = MockWrite::new(right_rc.clone(), 5);
+            let mut output = Output::new( Box::new(mock_write) );
+            output.write_u8(VALUE).unwrap();
+        }
+        let right_refcell: &RefCell<[u8; 1]> = right_rc.borrow();
+        let rigth_borrow = right_refcell.borrow();
+        let right_ref = rigth_borrow.as_ref();
+        assert_eq!(&VALUE.to_be_bytes(), right_ref);
+    }
+
+
+    #[test]
+    fn control_prompt_arg() {
+        let name: &str = "prompt-arg";
+        const REQ_LEFT: &str = "prompt-arg: ";
+        let arg: Option<String> = Some("imput via argument".to_string());
+        let resp_left = Zeroizing::new("imput via argument".to_string());
+
+        let control = Control::new(|req| {
+            assert_eq!(REQ_LEFT, req);
+            Ok("imput via TTY".to_string())   
+        });
+        let resp_right = control.prompt(name, arg).unwrap();
+        assert_eq!(resp_left, resp_right);
+    }
+
+
+    #[test]
+    fn control_prompt_noarg() {
+        let name: &str = "prompt-noarg";
+        const REQ_LEFT: &str = "prompt-noarg: ";
+        let arg: Option<String> = None;
+        let resp_left = Zeroizing::new("imput via TTY".to_string());
+
+        let control = Control::new(|req| {
+            assert_eq!(REQ_LEFT, req);
+            Ok("imput via TTY".to_string())   
+        });
+        let resp_right = control.prompt(name, arg).unwrap();
+        assert_eq!(resp_left, resp_right);
+    }
+
+
+    #[test]
+    fn control_extract_arg() {
+        let name: &str = "extract-arg";
+        const REQ_LEFT: &str = "extract-arg: ";
+        let arg = Some("imput a argument".to_string());
+
+        let data = "imput a argument";
+        let data_left = data.as_bytes();
+        let mut data_right = [0u8; 16];
+
+        let control = Control::new(|req| {
+            assert_eq!(REQ_LEFT, req);
+            Ok("imput via TTY".to_string())   
+        });
+
+        let res = control.extract(name, &mut data_right[..], arg, true).unwrap();
+        assert_eq!(Some(()),res);
+        assert_eq!(data_left, data_right);
+    }
+
+
+    #[test]
+    fn control_extract_noarg() {
+        let name: &str = "extract-arg";
+        const REQ_LEFT: &str = "extract-arg: ";
+        let arg = None;
+
+        let data = "imput via TTY...";
+        let data_left = data.as_bytes();
+        let mut data_right = [0u8; 16];
+
+        let control = Control::new(|req| {
+            assert_eq!(REQ_LEFT, req);
+            Ok("imput via TTY...".to_string())   
+        });
+
+        let res = control.extract(name, &mut data_right[..], arg, true).unwrap();
+        assert_eq!(Some(()), res);
+        assert_eq!(data_left, data_right);
+    }
+
+
+    #[test]
+    fn control_extract_none() {
+        let control = Control::new(|_| Ok("imput via TTY...".to_string()) );
+        let mut data = [0u8; 16];
+        let right = control.extract("extract-arg", &mut data[..], None, false).unwrap();
+        assert_eq!(None, right);
+        assert_eq!([0u8; 16], data);
+    }
+
+
+    #[test]
+    fn control_extract_err() {
+        let name = "err-arg";
+        let mut data = [0u8; 17];
+        let msg_left = format!("{} shoud be at least {} bytes", name, data.len());
+
+        let arg = Some("imput a argument".to_string());
+        let control = Control::new(|_| Ok("imput via TTY...".to_string()) );
+        
+        let res = control.extract(name, &mut data[..], arg, false);
+        if let Err(CrateError::Arg(msg_right)) = res {
+            assert_eq!(msg_left, msg_right);
+        } else {
+            panic!("test should return an error message: {}", msg_left);
+        }
+    }
+
+
+    fn input_read_base(size_step: usize, size_data: usize, size_sample: usize, size_buffer: usize) -> (Vec<u8>, Vec<u8>) {
+        // Data set
+        let mut vec_data = vec![0u8; size_data];
+        let mut vec_expected = vec![0u8; size_sample];
+        for i in 0..size_data {
+            let val = u8::try_from(i).unwrap();
+            vec_data[i] = val;
+            vec_expected[i] = val;
+        }
+
+        // Mock reader and input
+        let mock_read = MockRead::new(vec_data, size_step);
+        let mut input = Input::new( Box::new(mock_read) );
+        
+        // Process data
+        let mut vec_fact = vec![0u8; size_sample];
+        let mut vec_buff = vec![0u8; size_buffer];
+        
+        let mut idx_start = 0;
+        loop {
+            let nread = input.read(&mut vec_buff).unwrap();
+            if nread == size_buffer {
+                let idx_stop = idx_start + size_buffer;
+                (&mut vec_fact[idx_start..idx_stop]).copy_from_slice(&vec_buff);
+                idx_start = idx_stop;
+            } else {
+                let idx_stop = idx_start + nread;
+                (&mut vec_fact[idx_start..idx_stop]).copy_from_slice(&vec_buff[..nread]);
+                break;
+            }
+        }
+        (vec_expected, vec_fact)
+    }
+
+
+    fn output_write_base(size_step: usize, size_data: usize, size_sample: usize) -> (Vec<u8>, Rc<RefCell<Vec<u8>>>) {
+        // Data set
+        let mut vec_data = vec![0u8; size_data];
+        let mut vec_expected = vec![0u8; size_sample];
+        for i in 0..size_data {
+            let val = u8::try_from(i).unwrap();
+            vec_data[i] = val;
+            vec_expected[i] = val;
+        }
+
+        // Mock reader and output
+        let vec_fact = Rc::new(RefCell::new( vec![0u8; size_sample] ));
+        let mock_write = MockWrite::new(vec_fact.clone(), size_step);
+        let mut output = Output::new( Box::new(mock_write) );
+        
+        // Process data
+        output.write(&vec_data).unwrap();
+        drop(output);
+
+        (vec_expected, vec_fact)
     }
 
 
@@ -241,39 +464,44 @@ mod tests {
         }
     }
 
+    struct MockWrite<T: AsMut<[u8]>> {
+        inner: Rc<RefCell<T>>,
+        idx_start: usize,
+        step: usize,
+        is_err: bool,
+    }
 
-    fn input_read_base(size_step: usize, size_data: usize, size_sample: usize, size_buffer: usize) -> (Vec<u8>, Vec<u8>) {
-        // Data set
-        let mut vec_data = vec![0u8; size_data];
-        let mut vec_expected = vec![0u8; size_sample];
-        for i in 0..size_data {
-            let val = u8::try_from(i).unwrap();
-            vec_data[i] = val;
-            vec_expected[i] = val;
+    impl <T: AsMut<[u8]>> MockWrite<T> {
+        fn new(inner: Rc<RefCell<T>>, step: usize) -> Self {
+            Self { inner, step, idx_start: 0, is_err: false }
         }
+    }
 
-        // Mock reader and input
-        let mock_read = MockRead::new(vec_data, size_step);
-        let mut input = Input::new( Box::new(mock_read) );
-        
-        // Process data
-        let mut vec_fact = vec![0u8; size_sample];
-        let mut vec_buff = vec![0u8; size_buffer];
-        
-        let mut idx_start = 0;
-        loop {
-            let nread = input.read(&mut vec_buff).unwrap();
-            if nread == size_buffer {
-                let idx_stop = idx_start + size_buffer;
-                (&mut vec_fact[idx_start..idx_stop]).copy_from_slice(&vec_buff);
-                idx_start = idx_stop;
-            } else {
-                let idx_stop = idx_start + nread;
-                (&mut vec_fact[idx_start..idx_stop]).copy_from_slice(&vec_buff[..nread]);
-                break;
+    impl <T: AsMut<[u8]>> Write for MockWrite<T> {
+        fn write(&mut self, buf: &[u8]) -> Result<usize> {
+            if self.idx_start % (self.step.checked_mul(2).unwrap()) == 0 {
+                if self.is_err {
+                    self.is_err = false;
+                } else {
+                    self.is_err = true;
+                    return Err(Error::new(ErrorKind::Interrupted, "test interruption"))
+                }
             }
+            let mut inner = self.inner.borrow_mut();
+            let n = [
+                    self.step, 
+                    buf.len(), 
+                    inner.as_mut().len().checked_sub(self.idx_start).unwrap()
+                ].iter().min().unwrap().to_owned();
+            let idx_stop = self.idx_start.checked_add(n).unwrap();
+            inner.as_mut()[self.idx_start..idx_stop].copy_from_slice(&buf[..n]);
+            self.idx_start = idx_stop;
+            Ok(n)
         }
-        (vec_expected, vec_fact)
+
+        fn flush(&mut self) -> Result<()> {
+            Ok(())
+        }
     }
 
 }
