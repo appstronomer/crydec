@@ -17,3 +17,6 @@ aes-gcm = "0.10.1"
 clap = { version = "4.0.26", features = ["derive"] }
 rpassword = "7.1.0"
 rand = "0.8.5"
+
+[dev-dependencies]
+strum = { version = "0.24.1", features = ["derive"] }

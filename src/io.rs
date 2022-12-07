@@ -152,7 +152,6 @@ mod tests {
     use std::{
         rc::Rc,
         cell::RefCell,
-        borrow::Borrow,
         io::{Read, Write, Result, Error, ErrorKind},
     };
     use zeroize::Zeroizing;
@@ -218,10 +217,8 @@ mod tests {
         let size_data: usize = 41;
         let size_sample: usize = size_data + 1;
         let (left, right_rc) = output_write_base(5, size_data, size_sample);
-        let right_refcell: &RefCell<Vec<u8>> = right_rc.borrow();
-        let rigth_borrow = right_refcell.borrow();
-        let right_ref: &Vec<u8> = rigth_borrow.as_ref();
-        assert_eq!(&left, right_ref);
+        let right = Rc::try_unwrap(right_rc).unwrap().into_inner();
+        assert_eq!(left, right);
     }
 
 
@@ -230,10 +227,8 @@ mod tests {
         let size_data: usize = 40;
         let size_sample: usize = size_data;
         let (left, right_rc) = output_write_base(5, size_data, size_sample);
-        let right_refcell: &RefCell<Vec<u8>> = right_rc.borrow();
-        let rigth_borrow = right_refcell.borrow();
-        let right_ref: &Vec<u8> = rigth_borrow.as_ref();
-        assert_eq!(&left, right_ref);
+        let right = Rc::try_unwrap(right_rc).unwrap().into_inner();
+        assert_eq!(left, right);
     }
 
     
@@ -246,10 +241,8 @@ mod tests {
             let mut output = Output::new( Box::new(mock_write) );
             output.write_u32(VALUE).unwrap();
         }
-        let right_refcell: &RefCell<[u8; 4]> = right_rc.borrow();
-        let rigth_borrow = right_refcell.borrow();
-        let right_ref = rigth_borrow.as_ref();
-        assert_eq!(&VALUE.to_be_bytes(), right_ref);
+        let right = Rc::try_unwrap(right_rc).unwrap().into_inner();
+        assert_eq!(VALUE.to_be_bytes(), right);
     }
 
     
@@ -262,10 +255,8 @@ mod tests {
             let mut output = Output::new( Box::new(mock_write) );
             output.write_u8(VALUE).unwrap();
         }
-        let right_refcell: &RefCell<[u8; 1]> = right_rc.borrow();
-        let rigth_borrow = right_refcell.borrow();
-        let right_ref = rigth_borrow.as_ref();
-        assert_eq!(&VALUE.to_be_bytes(), right_ref);
+        let right = Rc::try_unwrap(right_rc).unwrap().into_inner();
+        assert_eq!(VALUE.to_be_bytes(), right);
     }
 
 

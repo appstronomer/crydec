@@ -149,6 +149,7 @@ impl ArgonVersion {
 
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, ValueEnum, Debug)]
+#[cfg_attr(test, derive(strum::EnumIter))]
 pub enum Cipher {
     XChacha20Poly1305,
     XChacha12Poly1305,
